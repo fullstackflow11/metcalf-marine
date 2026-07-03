@@ -1,0 +1,3 @@
+User-agent: *
+Allow: /
+Sitemap: https://metcalfmarineexhaust.com/sitemap.xml
