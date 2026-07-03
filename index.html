@@ -570,13 +570,22 @@ footer{border-top:1px solid var(--line);background:var(--ink-2);padding:84px 0 4
     </form>
     <script>
     (function(){
-      var ENDPOINT = "QUOTE_ENDPOINT_URL"; // ← replace with your Supabase function URL
+      // Direct-to-Supabase insert (leads land in mmx_quotes; email added later)
+      var SUPABASE_URL = "https://xuepnkcndeiaqmziaakt.supabase.co";
+      var SUPABASE_KEY = "sb_publishable_PTUofl7u_bYSKz9XqpcwKw_lm11698q";
+      var ENDPOINT = SUPABASE_URL + "/rest/v1/mmx_quotes";
       var form = document.getElementById('quote-form');
       var msg = document.getElementById('form-msg');
       var btn = document.getElementById('quote-submit');
       if(!form) return;
       form.addEventListener('submit', async function(e){
         e.preventDefault();
+        // honeypot: if the hidden "company" field is filled, silently drop (bot)
+        if(form.company && form.company.value){
+          form.reset();
+          msg.textContent = "Thank you — your request is in. We'll be in touch shortly.";
+          msg.style.color = "#5B9BC4"; return;
+        }
         var name = form.name.value.trim(), email = form.email.value.trim();
         if(!name || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)){
           msg.textContent = "Please add your name and a valid email.";
@@ -585,12 +594,20 @@ footer{border-top:1px solid var(--line);background:var(--ink-2);padding:84px 0 4
         btn.disabled = true; btn.querySelector('span').textContent = "Sending…";
         try{
           var res = await fetch(ENDPOINT, {
-            method:'POST', headers:{'content-type':'application/json'},
+            method:'POST',
+            headers:{
+              'content-type':'application/json',
+              'apikey': SUPABASE_KEY,
+              'authorization': 'Bearer ' + SUPABASE_KEY,
+              'prefer':'return=minimal'
+            },
             body: JSON.stringify({
               name:name, email:email,
-              vessel:form.vessel.value, engines:form.engines.value,
-              need:form.need.value, details:form.details.value,
-              company:form.company.value, source_page:'index'
+              vessel:form.vessel.value || null,
+              engines:form.engines.value || null,
+              need:form.need.value || null,
+              details:form.details.value || null,
+              source_page:'index'
             })
           });
           if(res.ok){
@@ -599,7 +616,7 @@ footer{border-top:1px solid var(--line);background:var(--ink-2);padding:84px 0 4
             msg.style.color = "#5B9BC4";
             btn.querySelector('span').textContent = "Sent ✓";
           }else{
-            throw new Error('bad status');
+            throw new Error('status ' + res.status);
           }
         }catch(err){
           msg.textContent = "Couldn't send just now — please call 954-463-4650 or email info@mmxhaust.com.";
